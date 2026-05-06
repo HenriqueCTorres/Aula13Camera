@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View,Alert,Button,Image } from 'react-native';
 import { useState,useEffect,useRef } from 'react';
+import * as Sharing from 'expo-sharing'
 
 //Biblioteca de camera no Expo
 import { CameraView,useCameraPermissions } from 'expo-camera';
@@ -21,6 +22,13 @@ export default function App() {
 
   //Estado da foto capturada
   const[foto,setFoto]=useState(null)
+
+  //Estado para alternar entre a câmera frontal e traseira
+  const[isFrontCamera,setIsFrontCamera]=useState(false)
+
+  //Estado para o gerenciamento do flash
+  const[flashLigado,setFlashLigado]=useState(false)
+
 
   //Pedindo permissão da galeria no inicio do app
   useEffect(()=>{
@@ -54,6 +62,37 @@ export default function App() {
     }
   }
 
+  //Função para salvar foto na galeria do aparelho
+  const salvarFoto = async ()=>{
+    if(foto?.uri){
+      try{
+        await MediaLibrary.createAssetAsync(foto.uri)//Salva foto na galeria
+        Alert.alert("Sucesso","Foto salva na galeria")
+        setFoto(null)//Reseta o estado para tirar outra foto
+      }catch(error){
+        Alert.alert("Error","Não foi possível salvar a foto.")
+      }
+    }
+  }
+
+  //Função para alternar entre as câmeras
+  const toggleCameraType = () =>{
+    setIsFrontCamera((prev)=>!prev)//Alterna entre true e false
+  }
+
+  //Função para alternar o flash
+  const alternarFlash = ()=>{
+    setFlashLigado((prev)=>!prev)
+  }
+
+  const compartilharFoto = async ()=>{
+    if(foto?.uri && await Sharing.isAvailableAsync()){
+      await Sharing.shareAsync(foto.uri)
+    }else{
+      Alert.alert("Erro","Compartilhamento não disponível")
+    }
+  }
+
   return (
     <View style={styles.container}>
       {
@@ -61,10 +100,13 @@ export default function App() {
           <>
           <CameraView
             ref={cameraRef}
-             style={styles.camera}
-              facing='back'
+            style={styles.camera}
+            facing={isFrontCamera?"front":"back"}
+            flash={flashLigado?"on":"off"}
           />
           <Button title='TIRAR UMA FOTO' onPress={tirarFoto}/>
+          <Button title="Alternar Câmera" onPress={toggleCameraType}/>
+          <Button title={flashLigado?"Desligar Flash":"Ligar Flash"} onPress={alternarFlash}/>
           </>
         ):(
           <>
@@ -72,8 +114,9 @@ export default function App() {
               source={{uri:foto.uri}}
               style={{width:200,height:200}}
             />
-            <Button title='Salvar Foto'/>
+            <Button title='Salvar Foto' onPress={salvarFoto}/>
             <Button title='Tirar outra foto' onPress={()=>setFoto(null)}/>
+            <Button title="Compartilhar Foto" onPress={compartilharFoto}/>
           </>
         )
       }
